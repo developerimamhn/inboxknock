@@ -1,0 +1,18 @@
+{
+  "name": "inboxknock-verifier",
+  "version": "0.1.0",
+  "private": true,
+  "description": "InboxKnock email verification service. No dependencies. Needs Node 24 or newer and outbound port 25.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.ts",
+    "dev": "node --watch --env-file-if-exists=.env src/server.ts",
+    "check": "node --env-file-if-exists=.env src/cli.ts",
+    "update-lists": "node scripts/update-lists.ts",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc -p ."
+  }
+}

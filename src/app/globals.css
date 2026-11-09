@@ -1,0 +1,785 @@
+@import "tailwindcss";
+
+/* Anek Bangla, Bengali subset. SIL Open Font License. Only downloaded when Bengali text is on the page. */
+@font-face {
+  font-family: "Anek Bangla";
+  font-style: normal;
+  font-weight: 400 700;
+  /* optional: on slow first visits the phone's own Bengali font is used at once, no late swap. */
+  font-display: optional;
+  src: url("/fonts/anek-bangla-bengali.woff2") format("woff2");
+  unicode-range: U+0951-0952, U+0964-0965, U+0980-09FE, U+1CD0, U+1CD2, U+1CD5-1CD6, U+1CD8, U+1CE1, U+1CEA, U+1CED, U+1CF2, U+1CF5-1CF7, U+200C-200D, U+20B9, U+25CC, U+A8F1;
+}
+
+:root {
+  --font-bangla: "Anek Bangla";
+}
+
+/* ------------------------------------------------------------------ */
+/* Tokens                                                               */
+/* ------------------------------------------------------------------ */
+@theme {
+  --color-ink: #0c0d0b;
+  --color-ink-2: #141612;
+  --color-ink-3: #1d1f1a;
+  --color-rule: #2b2e27;
+  --color-edge: #73776c; /* 4.2:1 on ink, for input borders */
+  --color-paper: #f1efe7;
+  --color-muted: #b0b2a8; /* 9:1 on ink */
+  --color-dim: #8b8e84; /* 5.6:1 on ink */
+  --color-signal: #4cf08c; /* actions and Valid only */
+  --color-signal-press: #2fd673;
+
+  --font-sans: var(--font-display), ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+
+  --breakpoint-xs: 25rem;
+  --ease-knock: cubic-bezier(0.2, 0.9, 0.1, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root {
+  --gutter: clamp(1rem, 4vw, 4rem);
+  --nav-h: 4rem;
+  color-scheme: dark;
+}
+
+/* ------------------------------------------------------------------ */
+/* Base                                                                 */
+/* ------------------------------------------------------------------ */
+@layer base {
+  html {
+    background: var(--color-ink);
+    color: var(--color-paper);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-padding-top: calc(var(--nav-h) + 1rem);
+  }
+  html:not(.lenis) {
+    scroll-behavior: smooth;
+  }
+  body {
+    font-family: var(--font-sans);
+    font-optical-sizing: auto;
+    background: var(--color-ink);
+    color: var(--color-paper);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  html[lang="bn"] body {
+    font-family: var(--font-display), var(--font-bangla), "Noto Sans Bengali", "Nirmala UI", ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.65;
+  }
+  ::selection {
+    background: var(--color-paper);
+    color: var(--color-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-paper);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  a {
+    color: inherit;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+  }
+  button,
+  summary {
+    cursor: pointer;
+  }
+  [hidden] {
+    display: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Layout and type                                                      */
+/* ------------------------------------------------------------------ */
+@layer components {
+  .wrap {
+    width: 100%;
+    max-width: 112rem;
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+  .grid-12 {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: 1rem;
+  }
+  @media (min-width: 48rem) {
+    .grid-12 {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: 1.5rem;
+    }
+  }
+
+  .label {
+    display: inline-flex;
+    gap: 0.75em;
+    align-items: baseline;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  html[lang="bn"] .label {
+    letter-spacing: 0.02em;
+    font-size: 0.9375rem;
+  }
+  .label-num {
+    color: var(--color-paper);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .display-1 {
+    font-size: clamp(3.5rem, min(12.5vw, 17svh), 13.5rem);
+    font-weight: 700;
+    line-height: 0.9;
+    letter-spacing: -0.045em;
+  }
+  .display-2 {
+    font-size: clamp(2.75rem, 8.2vw, 9rem);
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    text-wrap: balance;
+  }
+  .display-3 {
+    font-size: clamp(2.25rem, 5.4vw, 5.75rem);
+    font-weight: 650;
+    line-height: 1;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+  html[lang="bn"] .display-1 {
+    font-size: clamp(3rem, min(10vw, 13svh), 10.5rem);
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+  }
+  html[lang="bn"] .display-2 {
+    font-size: clamp(2.25rem, 6.6vw, 7rem);
+    line-height: 1.18;
+    letter-spacing: -0.01em;
+  }
+  html[lang="bn"] .display-3 {
+    font-size: clamp(1.875rem, 4.4vw, 4.5rem);
+    line-height: 1.22;
+    letter-spacing: 0;
+  }
+  .lead {
+    font-size: clamp(1.1875rem, 1.9vw, 1.75rem);
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    color: var(--color-muted);
+    text-wrap: pretty;
+  }
+  html[lang="bn"] .lead {
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+
+  /* Section rhythm: one idea per screen */
+  .section {
+    position: relative;
+    padding-block: clamp(6rem, 16vh, 12rem);
+    border-top: 1px solid var(--color-rule);
+  }
+
+  /* Masked line used by the hero headline */
+  .mask-line {
+    display: block;
+    overflow: hidden;
+    padding-bottom: 0.08em;
+    margin-bottom: -0.08em;
+  }
+  html[lang="bn"] .mask-line {
+    padding-block: 0.06em 0.14em;
+    margin-block: -0.06em -0.14em;
+  }
+  .mask-line > span {
+    display: block;
+  }
+
+  /* Buttons */
+  .btn {
+    --btn-bg: var(--color-signal);
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6em;
+    min-height: 3.25rem;
+    padding: 0.8rem 1.6rem;
+    border-radius: 999px;
+    background: var(--btn-bg);
+    color: var(--color-ink);
+    font-weight: 650;
+    font-size: 1.0625rem;
+    line-height: 1.1;
+    letter-spacing: -0.005em;
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+      scale 0.12s var(--ease-knock),
+      background-color 0.15s,
+      translate 0.5s var(--ease-out-expo);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .btn:hover {
+    --btn-bg: #6cf6a2;
+  }
+  .btn:active,
+  .btn[data-pressed="true"] {
+    scale: 0.96;
+    --btn-bg: var(--color-signal-press);
+  }
+  .btn:disabled {
+    cursor: progress;
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--color-paper);
+    outline-offset: 3px;
+  }
+  .btn-lg {
+    min-height: 3.75rem;
+    padding-inline: 2rem;
+    font-size: 1.1875rem;
+  }
+  .btn-ghost {
+    --btn-bg: transparent;
+    color: var(--color-paper);
+    box-shadow: inset 0 0 0 1.5px var(--color-edge);
+  }
+  .btn-ghost:hover {
+    --btn-bg: var(--color-ink-3);
+  }
+  .btn-ghost:active {
+    --btn-bg: var(--color-ink-3);
+  }
+  .btn-arrow {
+    display: inline-block;
+    transition: translate 0.3s var(--ease-out-expo);
+  }
+  .btn:hover .btn-arrow {
+    translate: 0.2em 0;
+  }
+
+  .link {
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: underline;
+    text-decoration-color: var(--color-edge);
+    transition: text-decoration-color 0.15s;
+  }
+  .link:hover {
+    text-decoration-color: currentColor;
+  }
+
+  /* Status tags. Only Valid uses the signal colour. Shape tells them apart too. */
+  .tag {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.3em 0.8em 0.3em 0.65em;
+    border-radius: 999px;
+    font-weight: 650;
+    font-size: 0.9375rem;
+    line-height: 1.2;
+  }
+  .tag-dot {
+    width: 0.6em;
+    height: 0.6em;
+    border-radius: 999px;
+    flex: none;
+  }
+  .tag-valid {
+    background: var(--color-signal);
+    color: var(--color-ink);
+  }
+  .tag-valid .tag-dot {
+    background: var(--color-ink);
+  }
+  .tag-invalid {
+    background: var(--color-paper);
+    color: var(--color-ink);
+  }
+  .tag-invalid .tag-dot {
+    border-radius: 1px;
+    background: var(--color-ink);
+    rotate: 45deg;
+  }
+  .tag-risky {
+    box-shadow: inset 0 0 0 1.5px var(--color-paper);
+    color: var(--color-paper);
+  }
+  .tag-risky .tag-dot {
+    border: 1.5px solid currentColor;
+    background: transparent;
+  }
+  .tag-unknown {
+    box-shadow: inset 0 0 0 1.5px var(--color-edge);
+    color: var(--color-muted);
+  }
+  .tag-unknown .tag-dot {
+    border: 1.5px dashed currentColor;
+    background: transparent;
+  }
+
+  .todo {
+    display: block;
+    border: 2px dashed #ffd36b;
+    background: #2a2410;
+    color: #ffe39b;
+    padding: 0.875rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Door scene. States are CSS so they work without the GSAP bundle.     */
+/* Only transform and opacity animate.                                  */
+/* ------------------------------------------------------------------ */
+@layer components {
+  .door svg {
+    overflow: visible;
+  }
+  .door .leaf,
+  .door .light,
+  .door .env-move,
+  .door .env-knock,
+  .door .ring,
+  .door .plate,
+  .door .shut-mark,
+  .door .dots {
+    transform-box: fill-box;
+  }
+  .door .leaf {
+    transform-origin: 0% 50%;
+    transition: transform 0.9s var(--ease-out-expo);
+  }
+  .door .light {
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+  .door .env-move {
+    transform-origin: 50% 50%;
+    transition:
+      transform 0.8s var(--ease-out-expo),
+      opacity 0.5s ease;
+  }
+  .door .env-knock {
+    transform-origin: 50% 50%;
+  }
+  .door .ring {
+    transform-origin: 50% 50%;
+    opacity: 0;
+  }
+  .door .plate {
+    transform-origin: 50% 0%;
+    transition:
+      transform 0.5s var(--ease-out-expo),
+      opacity 0.3s ease;
+  }
+  .door .dots,
+  .door .shut-mark {
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  /* Answers */
+  .door[data-state="valid"] .leaf {
+    transform: scaleX(0.14);
+  }
+  .door[data-state="valid"] .light {
+    opacity: 1;
+  }
+  .door[data-state="valid"] .env-move {
+    transform: translate(0, -6%) scale(0.55);
+    opacity: 0;
+    transition-delay: 0.35s;
+  }
+  .door[data-state="risky"] .leaf {
+    transform: scaleX(0.72);
+  }
+  .door[data-state="risky"] .light {
+    opacity: 0.35;
+  }
+  .door[data-state="invalid"] .env-move,
+  .door[data-state="limit"] .env-move {
+    transform: translate(-58%, 14%) rotate(-14deg);
+  }
+  .door[data-state="invalid"] .shut-mark,
+  .door[data-state="limit"] .shut-mark {
+    opacity: 1;
+  }
+  .door[data-state="unknown"] .dots,
+  .door[data-state="error"] .dots {
+    opacity: 1;
+  }
+  .door[data-state="unknown"] .env-move,
+  .door[data-state="error"] .env-move {
+    opacity: 0.55;
+  }
+  /* Plate colours. Only Valid uses the signal colour. */
+  .door .plate-bg {
+    fill: var(--color-ink);
+    stroke: var(--color-paper);
+  }
+  .door .plate-text {
+    fill: var(--color-paper);
+  }
+  .door[data-state="valid"] .plate-bg {
+    fill: var(--color-signal);
+    stroke: var(--color-ink);
+    stroke-width: 4;
+  }
+  .door[data-state="valid"] .plate-text,
+  .door[data-state="invalid"] .plate-text,
+  .door[data-state="limit"] .plate-text {
+    fill: var(--color-ink);
+  }
+  .door[data-state="invalid"] .plate-bg,
+  .door[data-state="limit"] .plate-bg {
+    fill: var(--color-paper);
+  }
+  .door[data-state="risky"] .plate-bg {
+    stroke-dasharray: 7 5;
+  }
+  .door[data-state="unknown"] .plate-bg,
+  .door[data-state="error"] .plate-bg {
+    stroke: var(--color-edge);
+  }
+  .door[data-state="unknown"] .plate-text,
+  .door[data-state="error"] .plate-text {
+    fill: var(--color-muted);
+  }
+  .door[data-answer="true"] .plate {
+    animation: plate-swing 0.9s var(--ease-out-expo);
+  }
+
+  /* Knocking: three taps, a pause, repeat. Used for real waiting only. */
+  .door[data-state="knocking"] .env-knock {
+    animation: knock-loop 1.8s var(--ease-knock) infinite;
+  }
+  .door[data-state="knocking"] .ring {
+    animation: ring-loop 1.8s ease-out infinite;
+  }
+  .door[data-state="knocking"] .ring-2 {
+    animation-delay: 0.22s;
+  }
+  .door[data-state="knocking"] .ring-3 {
+    animation-delay: 0.44s;
+  }
+}
+
+@keyframes knock-loop {
+  0%, 36%, 100% { transform: scale(1); }
+  4%, 16%, 28% { transform: scale(0.9); }
+  10%, 22% { transform: scale(1); }
+}
+@keyframes ring-loop {
+  0% { transform: scale(0.5); opacity: 0; }
+  3% { opacity: 0.85; }
+  24% { transform: scale(2.1); opacity: 0; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+@keyframes plate-swing {
+  0% { transform: rotate(9deg); }
+  35% { transform: rotate(-5deg); }
+  65% { transform: rotate(2deg); }
+  100% { transform: rotate(0); }
+}
+
+/* Hero intro: the envelope arrives, knocks three times, the door answers. */
+@keyframes env-arrive {
+  0% { transform: translate(-190%, 0) rotate(-10deg); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translate(0, 0) rotate(0); opacity: 1; }
+}
+@keyframes knock-three {
+  0%, 100% { transform: scale(1); }
+  12%, 45%, 78% { transform: scale(0.9); }
+  28%, 61%, 94% { transform: scale(1); }
+}
+@keyframes ring-once {
+  0% { transform: scale(0.5); opacity: 0; }
+  12% { opacity: 0.85; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+@keyframes plate-in {
+  0% { transform: translateY(-14px) rotate(8deg); opacity: 0; }
+  100% { transform: translateY(0) rotate(0); opacity: 1; }
+}
+@keyframes rise {
+  0% { transform: translateY(105%); }
+  100% { transform: translateY(0); }
+}
+@keyframes fade-up {
+  0% { transform: translateY(14px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes fade {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Motion is opt-in. The inline head script adds .motion only when the
+   visitor has not asked for reduced motion, is not on Save-Data and the
+   device is not low power. Everything below is skipped otherwise. */
+.motion .hero-line > span {
+  animation: rise 1s var(--ease-out-expo) both;
+}
+.motion .hero-line:nth-child(2) > span {
+  animation-delay: 0.09s;
+}
+.motion .door[data-intro="true"] .env-move {
+  animation: env-arrive 1.1s var(--ease-out-expo) 0.35s both;
+}
+.motion .door[data-intro="true"] .env-knock {
+  animation: knock-three 0.95s var(--ease-knock) 1.45s both;
+}
+.motion .door[data-intro="true"] .ring-1 {
+  animation: ring-once 0.6s ease-out 1.5s both;
+}
+.motion .door[data-intro="true"] .ring-2 {
+  animation: ring-once 0.6s ease-out 1.81s both;
+}
+.motion .door[data-intro="true"] .ring-3 {
+  animation: ring-once 0.6s ease-out 2.12s both;
+}
+.motion .door[data-intro="true"] .plate {
+  animation: plate-in 0.8s var(--ease-out-expo) 2.55s both;
+}
+
+/* Reduced comfort mode: no movement, only quick fades. */
+.calm .door .leaf,
+.calm .door .env-move,
+.calm .door .plate {
+  transition: none;
+}
+.calm .door[data-state="knocking"] .env-knock,
+.calm .door[data-state="knocking"] .ring,
+.calm .door[data-answer="true"] .plate {
+  animation: none;
+}
+.calm .door[data-state="knocking"] .dots {
+  opacity: 1;
+  animation: fade 0.8s ease-in-out infinite alternate;
+}
+.calm .fx-fade {
+  animation: fade 0.4s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .door[data-state="knocking"] .dots {
+    opacity: 1;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Sections                                                             */
+/* ------------------------------------------------------------------ */
+@layer components {
+  /* Checks: each row lights up as one knock */
+  .check-mark {
+    position: relative;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 999px;
+    border: 1.5px solid var(--color-paper);
+    flex: none;
+  }
+  .check-mark::before {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: inherit;
+    background: var(--color-paper);
+    transition:
+      transform 0.5s var(--ease-out-expo),
+      opacity 0.3s;
+  }
+  .check-mark::after {
+    content: "";
+    position: absolute;
+    inset: -1.5px;
+    border-radius: inherit;
+    border: 1.5px solid var(--color-paper);
+    opacity: 0;
+  }
+  .js-checks .check-row:not(.is-lit) .check-mark::before {
+    transform: scale(0);
+    opacity: 0;
+  }
+  .js-checks .check-row.is-lit .check-mark::after {
+    animation: ring-once 0.7s ease-out both;
+  }
+  .check-row .check-title {
+    transition: translate 0.7s var(--ease-out-expo);
+  }
+  .js-checks .check-row:not(.is-lit) .check-title {
+    translate: 0.75rem 0;
+  }
+
+  /* Results picker */
+  .status-btn {
+    min-height: 3.5rem;
+    text-align: left;
+    border-top: 1px solid var(--color-rule);
+    transition: background-color 0.2s;
+  }
+  .status-btn:hover {
+    background: var(--color-ink-2);
+  }
+  .status-btn[aria-pressed="true"] {
+    background: var(--color-ink-2);
+  }
+  .status-btn .status-arrow {
+    opacity: 0;
+    transition:
+      opacity 0.2s,
+      translate 0.4s var(--ease-out-expo);
+    translate: -0.5rem 0;
+  }
+  .status-btn[aria-pressed="true"] .status-arrow,
+  .status-btn:hover .status-arrow {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+
+  /* FAQ accordion */
+  .faq summary {
+    list-style: none;
+  }
+  .faq summary::-webkit-details-marker {
+    display: none;
+  }
+  .faq .faq-icon {
+    transition: rotate 0.4s var(--ease-out-expo);
+  }
+  .faq details[open] .faq-icon {
+    rotate: 45deg;
+  }
+  .faq details[open] .faq-answer {
+    animation: fade-up 0.45s var(--ease-out-expo) both;
+  }
+
+  /* Drop zone */
+  .dropzone {
+    border: 1.5px dashed var(--color-edge);
+    transition:
+      border-color 0.2s,
+      background-color 0.2s;
+  }
+  .dropzone[data-over="true"] {
+    border-color: var(--color-signal);
+    background: var(--color-ink-2);
+  }
+
+  /* Mobile sticky CTA */
+  .sticky-cta {
+    transition:
+      transform 0.45s var(--ease-out-expo),
+      opacity 0.3s;
+  }
+  .sticky-cta[data-show="false"] {
+    transform: translateY(130%);
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+/* Lenis */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-stopped {
+  overflow: clip;
+}
+.lenis [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+@media (forced-colors: active) {
+  .btn,
+  .tag {
+    border: 1px solid ButtonText;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Small pieces                                                         */
+/* ------------------------------------------------------------------ */
+/* Language toggle label. System Bengali fonts only, so English pages never download Anek Bangla. */
+.font-bn {
+  font-family: "Noto Sans Bengali", "Nirmala UI", "Vrinda", "Bangla Sangam MN", "Kohinoor Bangla", sans-serif;
+}
+
+/* Masks made by SplitText for headline reveals. Extra room for Bangla marks. */
+[data-reveal] .reveal-line-mask {
+  padding-bottom: 0.1em;
+  margin-bottom: -0.1em;
+}
+html[lang="bn"] [data-reveal] .reveal-line-mask {
+  padding-block: 0.08em 0.18em;
+  margin-block: -0.08em -0.18em;
+}
+
+/* Loading indicator inside the button: three soft knocks */
+.knock-dots {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 999px;
+  background: currentColor;
+  animation: knock-dot 1.8s var(--ease-knock) infinite;
+}
+@keyframes knock-dot {
+  0%, 36%, 100% { transform: scale(1); opacity: 1; }
+  4%, 16%, 28% { transform: scale(0.55); opacity: 0.6; }
+  10%, 22% { transform: scale(1); opacity: 1; }
+}
+.calm .knock-dots {
+  animation: fade 0.8s ease-in-out infinite alternate;
+}
+
+/* Pinned "How it works": the active step gets a bright edge */
+.how-pinned .how-panel {
+  transition: border-color 0.3s;
+}
+.how-pinned .how-panel.is-active {
+  border-color: var(--color-paper);
+}
+
+/* How it works, horizontal track when pinned (desktop with motion only).
+   Unlayered on purpose so it beats the grid utilities. */
+.how-pinned .how-track {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 1.5rem;
+  will-change: transform;
+}
+.how-pinned .how-panel {
+  flex: 0 0 min(62vw, 52rem);
+}
+.how-pinned .how-progress {
+  display: block;
+}
