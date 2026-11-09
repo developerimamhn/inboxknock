@@ -8,7 +8,7 @@ import type { DoorState } from "../DoorSvg";
 type Phase = "idle" | "sending" | "success" | "closed" | "error" | "format";
 
 /**
- * Shown instead of the checker when VERIFY_API_URL is not set in production.
+ * Shown instead of the checker when no verifier is configured in production.
  * It only reports success when the server confirms the sign-up was saved.
  */
 export function EarlyAccess({ lang, onDoor }: { lang: Lang; onDoor: (d: { state: DoorState; label: string } | null) => void }) {

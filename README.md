@@ -131,6 +131,35 @@ For mail servers to answer:
 Run it with systemd or pm2, behind HTTPS (Caddy or nginx), and keep `API_KEY` set so only your website can call it.
 Usage counts are kept per visitor IP in `verifier/data/usage.json` until the site has accounts.
 
+### Deploying on Vercel (services)
+
+`vercel.json` deploys both parts as one Vercel project:
+
+- `app` (the Next.js site, repo root) is public on every path.
+- `verifier` (`verifier/`, built from its `Dockerfile` as a container) is internal. It has no public URL.
+- The `app` service has a binding that injects the verifier's internal URL as `VERIFIER_URL` at runtime.
+  `/api/verify` calls `VERIFIER_URL` + `verify`. Do not set `VERIFIER_URL` yourself.
+
+Project environment variables to set in Vercel (both services see them):
+
+| Variable | Value |
+| --- | --- |
+| `VERIFY_API_KEY` | A long random secret. The site sends it, and the verifier checks it |
+| `SMTP_HELO`, `SMTP_FROM` | See "Where to run it" above |
+| `NEXT_PUBLIC_SITE_URL`, `EARLY_ACCESS_WEBHOOK_URL` | As before |
+
+Leave `VERIFY_API_URL` empty on Vercel. A build on Vercel always shows the live checker, because the verifier ships in the same deployment.
+Test locally with `vercel dev`, which runs both services and injects the binding.
+
+Two limits of running the verifier on Vercel:
+
+- **Port 25.** Vercel, like most clouds, is expected to block outbound port 25. Then the mailbox and catch-all checks cannot run.
+  The verifier notices after three failed connections, answers Unknown at once for 10 minutes, and shows `"port25Blocked": true`
+  in `/health`. Every other check still works. For full mailbox checks, run the same Docker image on a VPS with port 25 open,
+  set `VERIFY_API_URL` and remove the `verifier` service from `vercel.json`.
+- **Usage counts.** `usage.json` lives inside the container, so counts reset when an instance restarts, and two instances keep separate counts.
+  Move them to a shared store (for example Upstash Redis) before you rely on the monthly limit.
+
 ### What no verifier can promise
 
 - Yahoo, AOL and many company servers accept every address. Those come back Risky catch-all.

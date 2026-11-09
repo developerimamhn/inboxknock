@@ -1,0 +1,22 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": ".",
+      "framework": "nextjs",
+      "bindings": [
+        { "type": "service", "service": "verifier", "format": "url", "env": "VERIFIER_URL" }
+      ]
+    },
+    "verifier": {
+      "root": "verifier/",
+      "runtime": "container"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": { "service": "app" }
+    }
+  ]
+}

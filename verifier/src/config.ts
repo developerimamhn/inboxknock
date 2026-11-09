@@ -16,7 +16,8 @@ function on(name: string, fallback: boolean) {
 export const config = {
   port: num("PORT", 8787),
   host: env.HOST || "0.0.0.0",
-  apiKey: env.API_KEY || "",
+  // On Vercel both services share project env vars, so the website's VERIFY_API_KEY works here too.
+  apiKey: env.API_KEY || env.VERIFY_API_KEY || "",
   smtp: {
     enabled: on("SMTP_PROBE", true),
     helo: env.SMTP_HELO || "verify.inboxknock.com",

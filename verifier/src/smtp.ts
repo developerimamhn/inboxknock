@@ -32,7 +32,13 @@ export type ProbeOptions = {
   port?: number;
 };
 
-export type SmtpProbe = (email: string, domain: string, hosts: string[]) => Promise<ProbeResult>;
+export type SmtpProbe = ((email: string, domain: string, hosts: string[]) => Promise<ProbeResult>) & {
+  /** True while outbound port 25 looks blocked on this machine. */
+  blocked?: () => boolean;
+};
+
+/** Connection errors that mean "we cannot reach port 25 at all", not "this server is down". */
+const UNREACHABLE = /connect timeout|ETIMEDOUT|ENETUNREACH|EHOSTUNREACH|EACCES|EPERM/;
 
 type Reply = { code: number; text: string; lines: string[] };
 
@@ -182,7 +188,8 @@ function connect(host: string, port: number, timeoutMs: number): Promise<net.Soc
 }
 
 async function probeHost(host: string, email: string, domain: string, opt: ProbeOptions): Promise<ProbeResult> {
-  const socket = await connect(host, opt.port ?? 25, opt.timeoutMs);
+  // A short connect timeout keeps a blocked port 25 from eating the whole request budget.
+  const socket = await connect(host, opt.port ?? 25, Math.min(opt.timeoutMs, 5000));
   const s = new Session(socket, opt.timeoutMs);
   try {
     const greet = await s.read();
@@ -244,20 +251,37 @@ function createLimiter(perHost: number) {
 
 export function createSmtpProbe(opt: ProbeOptions & { perHost: number }): SmtpProbe {
   const limit = createLimiter(opt.perHost);
-  return async function probe(email, domain, hosts) {
+  // Many hosts (Vercel and most clouds) block outbound port 25. After a few hosts in a row cannot
+  // be reached, stop trying for a while so every check answers Unknown fast instead of timing out.
+  let failsInARow = 0;
+  let blockedUntil = 0;
+  const BLOCK_AFTER = 3;
+  const BLOCK_FOR = 10 * 60 * 1000;
+
+  const probe: SmtpProbe = async function probe(email, domain, hosts) {
+    if (Date.now() < blockedUntil) return { mailbox: "unknown", catchAll: null, detail: "port 25 unreachable from this server" };
     let last: ProbeResult = { mailbox: "unknown", catchAll: null, detail: "no host answered" };
     // Try up to two hosts. Move on only when a host cannot be reached or gives no clear answer.
     for (const host of hosts.slice(0, 2)) {
       try {
         const r = await limit(host, () => probeHost(host, email, domain, opt));
+        failsInARow = 0;
         if (r.mailbox !== "unknown") return r;
         last = r;
       } catch (err) {
-        last = { mailbox: "unknown", catchAll: null, host, detail: (err as Error).message };
+        const message = (err as Error & { code?: string }).code || (err as Error).message;
+        if (UNREACHABLE.test(message) && ++failsInARow >= BLOCK_AFTER) {
+          blockedUntil = Date.now() + BLOCK_FOR;
+          console.warn("Outbound port 25 looks blocked. SMTP checks answer Unknown for the next 10 minutes.");
+          return { mailbox: "unknown", catchAll: null, host, detail: "port 25 unreachable from this server" };
+        }
+        last = { mailbox: "unknown", catchAll: null, host, detail: message };
       }
     }
     return last;
   };
+  probe.blocked = () => Date.now() < blockedUntil;
+  return probe;
 }
 
 export const __test = { classify };

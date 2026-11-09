@@ -1,4 +1,4 @@
-import { STATUSES, VERIFY_API_URL, VERIFY_TIMEOUT_MS, type Status } from "@/config/site";
+import { STATUSES, VERIFY_TIMEOUT_MS, verifyEndpoint, type Status } from "@/config/site";
 import { clientIp, json, readEmail, sameOrigin } from "@/lib/api";
 import { isValidFormat, normalizeEmail } from "@/lib/email";
 import { cleanChecks, demoResult, type VerifyResult } from "@/lib/verify";
@@ -27,8 +27,8 @@ async function hasMailServer(domain: string): Promise<true | "no_domain" | "no_m
 /**
  * POST /api/verify  { email }
  * 1. Validates the format here, so bad input never costs a check.
- * 2. Forwards to VERIFY_API_URL.
- * 3. Without VERIFY_API_URL: mock "Demo result" in development, 503 in production.
+ * 2. Forwards to the verifier (Vercel binding VERIFIER_URL, or VERIFY_API_URL).
+ * 3. Without either: mock "Demo result" in development, 503 in production.
  */
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return json({ error: "server" }, 403);
@@ -37,7 +37,8 @@ export async function POST(req: Request) {
   if (raw === null || !isValidFormat(raw)) return json({ error: "format" }, 400);
   const email = normalizeEmail(raw);
 
-  if (!VERIFY_API_URL) {
+  const endpoint = verifyEndpoint();
+  if (!endpoint) {
     if (process.env.NODE_ENV === "development") {
       // Short pause so the loading state can be reviewed. Development only.
       await new Promise((r) => setTimeout(r, 900));
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
     const cookie = req.headers.get("cookie");
     if (cookie) headers.Cookie = cookie; // lets the backend see the signed-in account
 
-    upstream = await fetch(VERIFY_API_URL, {
+    upstream = await fetch(endpoint, {
       method: "POST",
       headers,
       body: JSON.stringify({ email }),

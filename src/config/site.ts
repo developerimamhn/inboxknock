@@ -6,8 +6,22 @@
 
 export const FREE_MONTHLY_CHECKS = 10000;
 export const CONTACT_EMAIL = "hello@inboxknock.com";
-/** Server only. Never read this in a client component. */
-export const VERIFY_API_URL = process.env.VERIFY_API_URL;
+/**
+ * Server only. Where /api/verify sends each check, read at request time.
+ * On Vercel the verifier service binding injects VERIFIER_URL (runtime only, never during the build).
+ * Anywhere else, set VERIFY_API_URL to the full endpoint, for example http://localhost:8787/verify.
+ */
+export function verifyEndpoint(): string | undefined {
+  const bound = process.env.VERIFIER_URL;
+  if (bound) return new URL("verify", bound.endsWith("/") ? bound : `${bound}/`).toString();
+  return process.env.VERIFY_API_URL || undefined;
+}
+
+/**
+ * Build time: will a verifier answer at runtime? On Vercel the verifier service ships in the same
+ * deployment, so the binding is known to exist even though it cannot be read during the build.
+ */
+export const VERIFIER_EXPECTED = Boolean(process.env.VERIFY_API_URL || process.env.VERCEL === "1");
 
 export const SITE_NAME = "InboxKnock";
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://inboxknock.com").replace(/\/$/, "");

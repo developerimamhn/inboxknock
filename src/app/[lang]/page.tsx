@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CONTACT_EMAIL, SITE_NAME, SITE_URL, VERIFY_API_URL, getCopy, isLang, localePath, type Lang } from "@/config/site";
+import { CONTACT_EMAIL, SITE_NAME, SITE_URL, VERIFIER_EXPECTED, getCopy, isLang, localePath, type Lang } from "@/config/site";
 import { pageMetadata } from "@/lib/seo";
 import type { CheckerMode } from "@/lib/verify";
 import { Nav } from "@/components/Nav";
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: PageProps<"/[lang]">): Promis
 
 /** Live checker when a backend is configured, demo in local development, early access otherwise. */
 function checkerMode(): CheckerMode {
-  if (VERIFY_API_URL) return "live";
+  if (VERIFIER_EXPECTED) return "live";
   if (process.env.NODE_ENV === "development") return "demo";
   return "early";
 }

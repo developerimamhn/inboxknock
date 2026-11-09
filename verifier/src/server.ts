@@ -66,7 +66,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || "/", "http://x");
 
   if (req.method === "GET" && url.pathname === "/health") {
-    return send(res, 200, { ok: true, smtp: config.smtp.enabled, lists: listSizes() });
+    return send(res, 200, { ok: true, smtp: config.smtp.enabled, port25Blocked: deps.smtp?.blocked?.() ?? false, lists: listSizes() });
   }
   if (req.method !== "POST" || (url.pathname !== "/" && url.pathname !== "/verify")) {
     return send(res, 404, { error: "not_found" });

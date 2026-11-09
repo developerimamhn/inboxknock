@@ -187,3 +187,16 @@ test("typo trap stays risky when its DNS is broken", async () => {
   const r = await verify("sam@gmial.com", { dns: async () => ({ kind: "unknown", detail: "ESERVFAIL" }), smtp: null });
   assert.deepEqual([r.status, r.reason], ["risky", "spam_trap"]);
 });
+
+test("smtp: blocked port 25 switches to fast Unknown", async () => {
+  // 10.255.255.1 is not routable, so connects time out like a firewall drop.
+  const probe = createSmtpProbe({ helo: "t", from: "t@t", timeoutMs: 300, startTls: false, perHost: 4, port: 25 });
+  await probe("a@x.io", "x.io", ["10.255.255.1", "10.255.255.2"]);
+  const second = await probe("a@x.io", "x.io", ["10.255.255.3", "10.255.255.4"]);
+  assert.equal(second.detail, "port 25 unreachable from this server");
+  assert.equal(probe.blocked?.(), true);
+  const t = Date.now();
+  const third = await probe("a@x.io", "x.io", ["10.255.255.5"]);
+  assert.equal(third.mailbox, "unknown");
+  assert.ok(Date.now() - t < 50, "answers at once while blocked");
+});
