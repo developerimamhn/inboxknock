@@ -16,6 +16,7 @@ export type Reason =
   | "role"
   | "dns"
   | "smtp"
+  | "smtp_unavailable"
   | "smtp_off";
 
 /**
@@ -134,7 +135,9 @@ export async function verify(input: string, deps: Deps): Promise<Report> {
     checks.smtp = "unknown";
     checks.catch_all = "unknown";
     if (typo || trapLocal) return { ...base, status: "risky", reason: "spam_trap", debug };
-    return { ...base, status: "unknown", reason: "smtp", debug };
+    // We could not ask at all (port 25 closed, worker down, our own limits) versus the server not answering clearly.
+    const ours = /port 25 unreachable|worker|busy:|connect timeout|ETIMEDOUT|ENETUNREACH|EHOSTUNREACH/.test(probe.detail || "");
+    return { ...base, status: "unknown", reason: ours ? "smtp_unavailable" : "smtp", debug };
   }
 
   checks.smtp = "pass";

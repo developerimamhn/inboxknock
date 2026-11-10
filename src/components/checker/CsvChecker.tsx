@@ -390,13 +390,18 @@ export function CsvChecker({ lang, onDoor }: { lang: Lang; onDoor: (d: { state: 
                   <button type="button" className="btn" data-magnetic onClick={() => download(false)}>
                     {s.download}
                   </button>
-                  <button type="button" className="btn btn-ghost" onClick={() => download(true)}>
-                    {s.downloadValid}
-                  </button>
+                  {counts.valid > 0 && (
+                    <button type="button" className="btn btn-ghost" onClick={() => download(true)}>
+                      {s.downloadValid}
+                    </button>
+                  )}
                   <button type="button" className="link px-2 text-muted" onClick={reset}>
                     {s.another}
                   </button>
                 </div>
+              )}
+              {finishedPhase && counts.valid === 0 && (
+                <p className="mt-3 text-[0.9375rem] text-muted">{s.noValid}</p>
               )}
             </div>
           )}

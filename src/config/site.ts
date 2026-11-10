@@ -151,6 +151,10 @@ const en = {
       invalid_no_mx: { meaning: "This domain has no mail server, so it cannot receive email.", action: "Remove it." },
       invalid_mailbox: { meaning: "The mail server says this mailbox does not exist.", action: "Remove it." },
       unknown: { meaning: "The mail server did not give a clear answer.", action: "Check again later." },
+      unknown_smtp_unavailable: {
+        meaning: "We could not reach the mail server to ask about this mailbox. The other checks are below.",
+        action: "Check again later.",
+      },
     },
     freeNote: "This is a free email provider, like Gmail or Yahoo.",
     checksTitle: "What we checked",
@@ -206,6 +210,7 @@ const en = {
     summary: "Valid {valid}. Invalid {invalid}. Risky {risky}. Unknown {unknown}.",
     download: "Download checked list (CSV)",
     downloadValid: "Download Valid only",
+    noValid: "No address came back Valid, so there is no Valid-only file. The full list has every result.",
     another: "Check another file",
     remove: "Remove file",
     errors: {
@@ -397,6 +402,10 @@ const bn: Copy = {
       invalid_no_mx: { meaning: "এই domain-এ কোনো mail server নেই, তাই এখানে ইমেইল যায় না।", action: "List থেকে বাদ দিন।" },
       invalid_mailbox: { meaning: "Mail server বলছে এই mailbox নেই।", action: "List থেকে বাদ দিন।" },
       unknown: { meaning: "Mail server পরিষ্কার উত্তর দেয়নি।", action: "পরে আবার চেক করুন।" },
+      unknown_smtp_unavailable: {
+        meaning: "এই mailbox-এর কথা জিজ্ঞেস করতে mail server-এ পৌঁছানো যায়নি। বাকি চেকগুলো নিচে দেওয়া আছে।",
+        action: "পরে আবার চেক করুন।",
+      },
     },
     freeNote: "এটা Gmail বা Yahoo-এর মতো একটা ফ্রি email provider।",
     checksTitle: "আমরা যা চেক করেছি",
@@ -452,6 +461,7 @@ const bn: Copy = {
     summary: "Valid {valid}। Invalid {invalid}। Risky {risky}। Unknown {unknown}।",
     download: "চেক করা list download করুন (CSV)",
     downloadValid: "শুধু Valid download করুন",
+    noValid: "কোনো ঠিকানা Valid আসেনি, তাই শুধু-Valid file নেই। পুরো list-এ সব result আছে।",
     another: "আরেকটি file চেক করুন",
     remove: "File সরান",
     errors: {

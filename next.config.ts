@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
+import crypto from "node:crypto";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Random per build. Signs bot-check cookies when no secret is configured, so every
+  // instance of one deployment agrees. Only server code reads it.
+  env: { IK_BUILD_SECRET: process.env.IK_BUILD_SECRET || crypto.randomBytes(32).toString("hex") },
   reactStrictMode: true,
   experimental: { globalNotFound: true },
   turbopack: { root: process.cwd() },

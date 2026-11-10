@@ -22,7 +22,7 @@ export async function verifyEmail(email: string, signal?: AbortSignal): Promise<
   try {
     let { res, data } = await post(email, signal);
     // The server wants a bot check first. Run it once, then try again.
-    if (data?.error === "human" && SITE_KEY) {
+    if (data?.error === "human") {
       const passed = await passHumanCheck();
       if (!passed) return { ok: false, code: "human" };
       ({ res, data } = await post(email, signal));
@@ -43,14 +43,48 @@ type Turnstile = {
 
 let pending: Promise<boolean> | null = null;
 
-/** Shows Cloudflare Turnstile once. Parallel CSV requests share the same check. */
+/** Runs the bot check once. Parallel CSV requests share the same check. */
 function passHumanCheck(): Promise<boolean> {
   if (!pending) {
-    pending = runTurnstile().finally(() => {
+    pending = runCheck().finally(() => {
       pending = null;
     });
   }
   return pending;
+}
+
+async function runCheck(): Promise<boolean> {
+  try {
+    const info = (await (await fetch("/api/human", { cache: "no-store" })).json()) as { kind?: string; challenge?: string; bits?: number };
+    if (info.kind === "none") return true;
+    if (info.kind === "turnstile" && SITE_KEY) return runTurnstile();
+    if (info.kind === "pow" && info.challenge && info.bits) return runProofOfWork(info.challenge, info.bits);
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/** Finds a nonce whose SHA-256 starts with `bits` zero bits. About a second on a phone. */
+async function runProofOfWork(challenge: string, bits: number): Promise<boolean> {
+  const enc = new TextEncoder();
+  const full = Math.floor(bits / 8);
+  const rest = bits % 8;
+  const deadline = Date.now() + 60_000;
+  for (let nonce = 0; Date.now() < deadline; nonce++) {
+    const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(`${challenge}:${nonce}`)));
+    let ok = true;
+    for (let i = 0; i < full; i++) if (hash[i] !== 0) ok = false;
+    if (ok && rest && hash[full] >> (8 - rest) !== 0) ok = false;
+    if (!ok) continue;
+    const res = await fetch("/api/human", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ challenge, nonce: String(nonce) }),
+    });
+    return res.ok;
+  }
+  return false;
 }
 
 function loadScript(): Promise<Turnstile> {

@@ -15,7 +15,9 @@ export class Usage {
   private perMinute: number;
   private period = month();
   private used = new Map<string, number>();
-  private minute = new Map<string, { start: number; count: number }>();
+  /** Token bucket per visitor: a short burst, then ratePerMinute spread evenly. */
+  private buckets = new Map<string, { tokens: number; at: number }>();
+  private burst = Number(process.env.RATE_BURST) || 10;
   private dirty = false;
   private timer: NodeJS.Timeout;
 
@@ -47,10 +49,13 @@ export class Usage {
   check(key: string): "rate" | "limit" | null {
     this.roll();
     const now = Date.now();
-    const m = this.minute.get(key);
-    if (!m || now - m.start > 60_000) this.minute.set(key, { start: now, count: 1 });
-    else if (++m.count > this.perMinute) return "rate";
-    if (this.minute.size > 100_000) this.minute.clear();
+    const b = this.buckets.get(key) || { tokens: this.burst, at: now };
+    b.tokens = Math.min(this.burst, b.tokens + ((now - b.at) / 60_000) * this.perMinute);
+    b.at = now;
+    this.buckets.set(key, b);
+    if (this.buckets.size > 100_000) this.buckets.clear();
+    if (b.tokens < 1) return "rate";
+    b.tokens -= 1;
     if ((this.used.get(key) || 0) >= this.limit) return "limit";
     return null;
   }

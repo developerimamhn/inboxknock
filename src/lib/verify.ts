@@ -54,7 +54,8 @@ type RiskyKey = `risky_${(typeof KEYED.risky)[number]}`;
 type InvalidKey = `invalid_${(typeof KEYED.invalid)[number]}`;
 
 /** Map a result to the copy key that explains it. */
-export function resultKey(status: Status, reason?: Reason): Status | RiskyKey | InvalidKey {
+export function resultKey(status: Status, reason?: Reason): Status | RiskyKey | InvalidKey | "unknown_smtp_unavailable" {
+  if (status === "unknown" && reason === "smtp_unavailable") return "unknown_smtp_unavailable";
   if (status === "risky" && (KEYED.risky as readonly string[]).includes(reason ?? "")) return `risky_${reason}` as RiskyKey;
   if (status === "invalid" && (KEYED.invalid as readonly string[]).includes(reason ?? "")) return `invalid_${reason}` as InvalidKey;
   return status;

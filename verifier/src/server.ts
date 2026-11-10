@@ -42,10 +42,13 @@ function authorized(req: http.IncomingMessage) {
   return got.length === want.length && crypto.timingSafeEqual(got, want);
 }
 
-/** The website forwards the visitor IP. Only trust it when the caller proved who it is. */
+/**
+ * The website forwards the visitor IP. Trust it when the caller proved who it is (API key),
+ * or on Vercel, where this service is internal and only the website can reach it.
+ */
 function visitorKey(req: http.IncomingMessage) {
   const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
-  if (config.apiKey && forwarded) return forwarded;
+  if ((config.apiKey || process.env.VERCEL === "1") && forwarded) return forwarded;
   return req.socket.remoteAddress || "unknown";
 }
 

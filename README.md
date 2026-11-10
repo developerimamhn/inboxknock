@@ -199,11 +199,18 @@ every address means the worker is not reachable or port 25 is closed (check `/he
 
 ### Abuse protection
 
-- Per visitor IP: 60 checks a minute (`RATE_PER_MINUTE`) and the monthly free limit, in the verifier.
+Works with no setup:
+
+- Per visitor IP, in the website and again in the verifier: a burst of 10 checks, then one a second
+  (`RATE_BURST`, `RATE_PER_MINUTE`), plus the monthly free limit.
+- A bot check in front of `/api/verify`. Without Turnstile keys it is a small proof of work the browser solves
+  in well under a second; people never see it. Passing gives a signed cookie for two hours, tied to the IP.
+  Calls without it get `403 human`. Set `BOT_CHECK=off` to switch it off.
 - Total probes per minute on the VPS, so even many IPs together cannot burn it.
-- Optional Cloudflare Turnstile: set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` in Vercel.
-  A visitor passes once and gets a signed cookie for two hours, tied to their IP. Calls without it get `403 human`.
-  Most visitors never see the widget.
+
+For a real CAPTCHA, create a Turnstile widget in Cloudflare and set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and
+`TURNSTILE_SECRET_KEY` in Vercel. It replaces the proof of work. A script can solve the proof of work cheaply;
+it mainly stops naive scripts, and the rate limit does the rest.
 
 ### What no verifier can promise
 
