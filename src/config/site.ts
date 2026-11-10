@@ -29,7 +29,7 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://inboxknock
 /** Largest CSV a visitor can upload, in bytes. */
 export const CSV_MAX_BYTES = 5 * 1024 * 1024;
 /** How many checks run at the same time during a CSV run. */
-export const CSV_CONCURRENCY = 4;
+export const CSV_CONCURRENCY = 2;
 /** Warn when remaining checks fall to this share of the limit or lower. */
 export const LOW_CHECKS_WARNING_RATIO = 0.1;
 /** Upstream timeout for one check, in ms. */
@@ -133,6 +133,7 @@ const en = {
       offline: "You seem to be offline. Check your connection, then try again.",
       limit: "You have used all your free checks for this month. Write to {email} if you need more.",
       tooMany: "Too many checks in a short time. Wait a minute, then try again.",
+      human: "We could not confirm that you are a person. Reload the page and try again.",
     },
     results: {
       valid: { meaning: "The mailbox exists.", action: "Send." },
@@ -266,7 +267,7 @@ const en = {
   free: {
     label: "Free",
     h2: "Free to use.",
-    text: "Check up to {n} emails a month with a free account.",
+    text: "No account needed. Check up to {n} emails a month for free.",
     unit: "emails a month",
     button: "Clean your first list",
   },
@@ -275,9 +276,9 @@ const en = {
     h2: "Questions, answered.",
     items: [
       { q: "Does it send an email to the address?", a: "No. We check with the mail server without sending a message." },
-      { q: "Is it really free?", a: "Yes. Each free account can check up to {n} emails a month." },
+      { q: "Is it really free?", a: "Yes. No account needed. You can check up to {n} emails a month for free." },
       { q: "Why are some results Risky?", a: "Some domains accept every address, so the mailbox cannot be confirmed for certain." },
-      { q: "Can I use it for spam?", a: "No. Accounts used for spam or purchased lists will be closed." },
+      { q: "Can I use it for spam?", a: "No. Anyone who uses it for spam or purchased lists will be blocked." },
     ],
   },
   final: {
@@ -296,7 +297,7 @@ const en = {
     home: "Go to the home page",
   },
   legal: {
-    updated: "Last updated",
+    updated: "Effective from",
     todo: "TODO for the owner",
     back: "Back to InboxKnock",
   },
@@ -378,6 +379,7 @@ const bn: Copy = {
       offline: "আপনি মনে হয় offline। Internet connection দেখে আবার চেষ্টা করুন।",
       limit: "এই মাসের সব ফ্রি চেক শেষ। আরও লাগলে {email}-এ লিখুন।",
       tooMany: "অল্প সময়ে অনেক চেক হয়ে গেছে। এক মিনিট অপেক্ষা করে আবার চেষ্টা করুন।",
+      human: "আপনি মানুষ কি না, তা নিশ্চিত করা যায়নি। Page reload করে আবার চেষ্টা করুন।",
     },
     results: {
       valid: { meaning: "Mailbox আছে।", action: "পাঠান।" },
@@ -511,7 +513,7 @@ const bn: Copy = {
   free: {
     label: "ফ্রি",
     h2: "ব্যবহার ফ্রি।",
-    text: "ফ্রি account দিয়ে মাসে {n}টি পর্যন্ত ইমেইল চেক করুন।",
+    text: "কোনো account লাগবে না। মাসে {n}টি পর্যন্ত ইমেইল ফ্রি চেক করুন।",
     unit: "ইমেইল প্রতি মাসে",
     button: "প্রথম list পরিষ্কার করুন",
   },
@@ -520,9 +522,9 @@ const bn: Copy = {
     h2: "আপনার প্রশ্ন, আমাদের উত্তর।",
     items: [
       { q: "যে ঠিকানা চেক করি, সেখানে কি ইমেইল যায়?", a: "না। কোনো message না পাঠিয়েই আমরা mail server-এর সাথে চেক করি।" },
-      { q: "সত্যিই কি ফ্রি?", a: "হ্যাঁ। প্রতিটি ফ্রি account মাসে {n}টি পর্যন্ত ইমেইল চেক করতে পারে।" },
+      { q: "সত্যিই কি ফ্রি?", a: "হ্যাঁ। কোনো account লাগবে না। মাসে {n}টি পর্যন্ত ইমেইল ফ্রি চেক করতে পারবেন।" },
       { q: "কিছু result Risky আসে কেন?", a: "কিছু domain সব ঠিকানার মেইলই নিয়ে নেয়, তাই mailbox আছে কি না নিশ্চিতভাবে বলা যায় না।" },
-      { q: "Spam-এর জন্য কি ব্যবহার করা যাবে?", a: "না। Spam বা কেনা list-এর জন্য ব্যবহার করা account বন্ধ করে দেওয়া হবে।" },
+      { q: "Spam-এর জন্য কি ব্যবহার করা যাবে?", a: "না। Spam বা কেনা list-এর জন্য কেউ ব্যবহার করলে তার access বন্ধ করে দেওয়া হবে।" },
     ],
   },
   final: {
@@ -541,7 +543,7 @@ const bn: Copy = {
     home: "Home page-এ যান",
   },
   legal: {
-    updated: "সর্বশেষ update",
+    updated: "কার্যকর হবে",
     todo: "Owner-এর জন্য TODO",
     back: "InboxKnock-এ ফিরে যান",
   },
@@ -569,18 +571,31 @@ export type LegalBlock =
 export type LegalSection = { heading: string; blocks: LegalBlock[] };
 export type LegalPage = { title: string; intro: string; updated: string; sections: LegalSection[] };
 
+/** Date both documents take effect. */
+export const LEGAL_EFFECTIVE = { en: "12 December 2026", bn: "১২ ডিসেম্বর ২০২৬" };
+/** Where InboxKnock is run from. */
+const PLACE = { en: "Satkhira, Bangladesh", bn: "সাতক্ষীরা, বাংলাদেশ" };
+
 export const LEGAL: Record<Lang, { terms: LegalPage; privacy: LegalPage }> = {
   en: {
     terms: {
       title: "Terms of use",
-      intro: "These terms explain how you may use InboxKnock. Please read them before you check any email.",
-      updated: "TODO: add the date these terms take effect.",
+      intro: "These terms explain how you may use InboxKnock. By checking an email on this site, you agree to them.",
+      updated: LEGAL_EFFECTIVE.en,
       sections: [
         {
           heading: "Who we are",
           blocks: [
-            { type: "p", text: "InboxKnock is an email verification tool. It checks whether an email address can receive mail. It does not send email to the addresses you check." },
-            { type: "todo", text: "Add the legal name, registered address and country of the business that runs InboxKnock." },
+            { type: "p", text: `InboxKnock is an email verification tool, run from ${PLACE.en}. It checks whether an email address can receive mail. It does not send email to the addresses you check.` },
+            { type: "todo", text: "Add the registered company name here once registration is complete. Until then, InboxKnock is run by its founder." },
+          ],
+        },
+        {
+          heading: "Using InboxKnock",
+          blocks: [
+            { type: "p", text: `You do not need an account. You can check up to ${formatNumber(FREE_MONTHLY_CHECKS, "en")} emails a month for free. The limit is counted per IP address and starts again on the first day of each month.` },
+            { type: "p", text: "There is also a limit on how many checks can run in one minute. We may change these limits, and we will show the current free limit on this site." },
+            { type: "p", text: "Use the checker on this site. Do not call our servers with scripts or bots, and do not try to get around the limits or the bot check. We may block access that does." },
           ],
         },
         {
@@ -592,32 +607,44 @@ export const LEGAL: Record<Lang, { terms: LegalPage; privacy: LegalPage }> = {
               "Do not check addresses to send unwanted bulk email.",
               "Do not use InboxKnock to break any anti-spam or privacy law that applies to you.",
             ] },
-            { type: "p", text: "We will close accounts that are used for spam or purchased lists." },
-          ],
-        },
-        {
-          heading: "Your account and the free limit",
-          blocks: [
-            { type: "p", text: `A free account can check up to ${formatNumber(FREE_MONTHLY_CHECKS, "en")} emails a month. We may change this limit. We will show the current limit on this site.` },
-            { type: "p", text: "Keep your sign-in details safe. You are responsible for what happens in your account." },
+            { type: "p", text: "We will block anyone who uses InboxKnock for spam or purchased lists." },
           ],
         },
         {
           heading: "Results",
           blocks: [
-            { type: "p", text: "Each result is our best reading of what the mail server told us at the time. Mail servers can change their answer. A Valid result does not promise that your email will reach the inbox." },
+            { type: "p", text: "Each result is our best reading of what the mail server told us at the time. Mail servers can change their answer, and some never give a clear one. A Valid result does not promise that your email will reach the inbox." },
+          ],
+        },
+        {
+          heading: "The service as it is",
+          blocks: [
+            { type: "p", text: "InboxKnock is free and is provided as it is and as available. We do our best to keep it running and correct, but we do not promise that it will always be available, error free or right for your purpose." },
+          ],
+        },
+        {
+          heading: "Limits on our liability",
+          blocks: [
+            { type: "p", text: "As far as the law allows, we are not liable for indirect or follow-on losses, such as lost profit, lost data, or harm to your domain or sending reputation, that come from using InboxKnock or its results." },
+            { type: "p", text: "As far as the law allows, our total liability for any claim is limited to the amount you paid us for InboxKnock in the 12 months before the claim. Nothing in these terms limits liability that cannot be limited by law." },
           ],
         },
         {
           heading: "Ending your use",
           blocks: [
-            { type: "p", text: "You can stop using InboxKnock at any time. We may suspend or close an account that breaks these terms." },
+            { type: "p", text: "You can stop using InboxKnock at any time. We may block or stop access for anyone who breaks these terms." },
           ],
         },
         {
-          heading: "Legal details",
+          heading: "Changes to these terms",
           blocks: [
-            { type: "todo", text: "Add the governing law, the court or place for disputes, limitation of liability and warranty wording. Have a lawyer review these terms." },
+            { type: "p", text: "We may update these terms. When we do, we will change the date at the top of this page. If you keep using InboxKnock after that date, the new terms apply." },
+          ],
+        },
+        {
+          heading: "Governing law",
+          blocks: [
+            { type: "p", text: "These terms are governed by the laws of Bangladesh. Any dispute about them will be settled by the courts of Dhaka, Bangladesh." },
           ],
         },
         {
@@ -628,48 +655,66 @@ export const LEGAL: Record<Lang, { terms: LegalPage; privacy: LegalPage }> = {
     },
     privacy: {
       title: "Privacy",
-      intro: "This page explains what we collect when you use InboxKnock and why.",
-      updated: "TODO: add the date this policy takes effect.",
+      intro: "This page explains what we collect when you use InboxKnock, why, and how long we keep it.",
+      updated: LEGAL_EFFECTIVE.en,
       sections: [
+        {
+          heading: "Who is responsible",
+          blocks: [
+            { type: "p", text: `InboxKnock is run from ${PLACE.en}. We are responsible for the data described on this page. Contact: ${CONTACT_EMAIL}` },
+            { type: "todo", text: "Add the registered company name as the data controller once registration is complete." },
+          ],
+        },
         {
           heading: "What we collect",
           blocks: [
             { type: "list", items: [
               "The email addresses you check, so we can check them.",
-              "Files you upload for a CSV check. The file is read in your browser. Only the email addresses are sent to us to check.",
-              "Your own email address, if you create an account or join the early access list.",
-              "Basic technical data such as your IP address, used to stop abuse and enforce the free limit.",
+              "Files you upload for a CSV check stay in your browser. Only the email addresses are sent to us, one by one, to check.",
+              "Your IP address, to count the free limit and to stop abuse.",
+              "Your own email address, if you join the early access list or write to us.",
             ] },
-            { type: "p", text: "We remember your language choice in a small cookie called ik_lang. It holds only \"en\" or \"bn\"." },
+            { type: "p", text: "Cookies: ik_lang remembers your language and holds only \"en\" or \"bn\". When the bot check is on, ik_pass remembers for two hours that you passed it." },
           ],
         },
         {
-          heading: "What we do not do",
+          heading: "How a check works",
           blocks: [
-            { type: "list", items: [
-              "We do not send any email to the addresses you check.",
-              "We do not sell the addresses you check.",
-            ] },
+            { type: "p", text: "To check an address, our server looks up the domain and asks its mail server whether the mailbox exists. The mail server sees our server's IP address and the address we ask about. No email is sent to the address." },
           ],
         },
         {
           heading: "How long we keep data",
           blocks: [
-            { type: "todo", text: "State how long checked addresses, results, uploaded data and logs are kept, and when they are deleted. Do not publish this page until this is filled in." },
+            { type: "list", items: [
+              "Checked addresses and their results are not saved in a database. Our server keeps an answer in memory for up to one hour, so the same address is not checked twice in a row.",
+              "The count of checks per IP address is kept until the end of the month (UTC), then deleted.",
+              "Server logs keep the domain, the result and the time, not the full address. Logs are deleted after 30 days at the latest.",
+              "Early access emails are kept until we tell you about the launch, then deleted. You can ask us to delete yours sooner.",
+            ] },
           ],
         },
         {
-          heading: "Who we share data with",
+          heading: "Who processes data for us",
           blocks: [
-            { type: "todo", text: "List the service providers that process data (for example hosting and the verification backend) and where they are located." },
+            { type: "list", items: [
+              "Vercel Inc. (United States) hosts this website and the checker.",
+              "Cloudflare, Inc. (United States) runs the bot check (Turnstile), when it is shown.",
+            ] },
+            { type: "todo", text: "Add the name and country of the server provider that runs the mailbox check (the VPS), once it is chosen." },
+            { type: "p", text: "We do not sell the addresses you check or any other data." },
           ],
         },
         {
           heading: "Your rights",
           blocks: [
-            { type: "p", text: `You can ask us what data we hold about you, and ask us to correct or delete it. Write to ${CONTACT_EMAIL}.` },
-            { type: "todo", text: "Add the rights and legal basis that apply in the countries you serve, and the name of the data controller." },
+            { type: "p", text: `You can ask us what data we hold about you, and ask us to correct or delete it, or to stop using it. Write to ${CONTACT_EMAIL}. We reply within 30 days.` },
+            { type: "p", text: "We use this data because we need it to give you the checks you ask for and to keep the service safe from abuse." },
           ],
+        },
+        {
+          heading: "Changes to this page",
+          blocks: [{ type: "p", text: "If we change how we use data, we will update this page and the date at the top." }],
         },
         {
           heading: "Contact",
@@ -681,14 +726,22 @@ export const LEGAL: Record<Lang, { terms: LegalPage; privacy: LegalPage }> = {
   bn: {
     terms: {
       title: "ব্যবহারের শর্তাবলি",
-      intro: "InboxKnock কীভাবে ব্যবহার করবেন, এই শর্তগুলো তা বলে দেয়। কোনো ইমেইল চেক করার আগে একবার পড়ে নিন।",
-      updated: "TODO: এই শর্ত কোন তারিখ থেকে কার্যকর, তা যোগ করুন।",
+      intro: "InboxKnock কীভাবে ব্যবহার করবেন, এই শর্তগুলো তা বলে দেয়। এই site-এ কোনো ইমেইল চেক করলে আপনি এই শর্তগুলো মেনে নিচ্ছেন।",
+      updated: LEGAL_EFFECTIVE.bn,
       sections: [
         {
           heading: "আমরা কারা",
           blocks: [
-            { type: "p", text: "InboxKnock একটি email verification tool। এটা চেক করে কোনো ইমেইল ঠিকানা মেইল নিতে পারে কি না। যে ঠিকানাগুলো চেক করেন, সেখানে এটা কোনো ইমেইল পাঠায় না।" },
-            { type: "todo", text: "InboxKnock যে প্রতিষ্ঠান চালায়, তার আইনি নাম, নিবন্ধিত ঠিকানা ও দেশ যোগ করুন।" },
+            { type: "p", text: `InboxKnock একটি email verification tool, যা ${PLACE.bn} থেকে চালানো হয়। এটা চেক করে কোনো ইমেইল ঠিকানা মেইল নিতে পারে কি না। যে ঠিকানাগুলো চেক করেন, সেখানে এটা কোনো ইমেইল পাঠায় না।` },
+            { type: "todo", text: "নিবন্ধন শেষ হলে এখানে company-র নিবন্ধিত নাম যোগ করুন। ততদিন InboxKnock এর প্রতিষ্ঠাতা চালাচ্ছেন।" },
+          ],
+        },
+        {
+          heading: "InboxKnock ব্যবহার",
+          blocks: [
+            { type: "p", text: `কোনো account লাগে না। মাসে ${formatNumber(FREE_MONTHLY_CHECKS, "bn")}টি পর্যন্ত ইমেইল ফ্রি চেক করতে পারবেন। এই limit প্রতিটি IP address ধরে গোনা হয়, আর প্রতি মাসের প্রথম দিনে আবার শুরু হয়।` },
+            { type: "p", text: "এক মিনিটে কতগুলো চেক চালানো যাবে, তারও একটা limit আছে। আমরা এই limit বদলাতে পারি। বর্তমান ফ্রি limit এই site-এ দেখানো থাকবে।" },
+            { type: "p", text: "এই site-এর checker ব্যবহার করুন। Script বা bot দিয়ে আমাদের server-এ চেক চালাবেন না, আর limit বা bot check এড়ানোর চেষ্টা করবেন না। এমন হলে আমরা access বন্ধ করতে পারি।" },
           ],
         },
         {
@@ -700,32 +753,44 @@ export const LEGAL: Record<Lang, { terms: LegalPage; privacy: LegalPage }> = {
               "অনাকাঙ্ক্ষিত bulk email পাঠানোর জন্য ঠিকানা চেক করবেন না।",
               "আপনার জন্য প্রযোজ্য কোনো anti-spam বা privacy আইন ভাঙতে InboxKnock ব্যবহার করবেন না।",
             ] },
-            { type: "p", text: "Spam বা কেনা list-এর জন্য ব্যবহার করা account আমরা বন্ধ করে দেব।" },
-          ],
-        },
-        {
-          heading: "আপনার account ও ফ্রি limit",
-          blocks: [
-            { type: "p", text: `একটি ফ্রি account মাসে ${formatNumber(FREE_MONTHLY_CHECKS, "bn")}টি পর্যন্ত ইমেইল চেক করতে পারে। আমরা এই limit বদলাতে পারি। বর্তমান limit এই site-এ দেখানো থাকবে।` },
-            { type: "p", text: "আপনার sign-in তথ্য নিরাপদে রাখুন। আপনার account-এ যা হয়, তার দায় আপনার।" },
+            { type: "p", text: "Spam বা কেনা list-এর জন্য InboxKnock ব্যবহার করলে আমরা access বন্ধ করে দেব।" },
           ],
         },
         {
           heading: "Results",
           blocks: [
-            { type: "p", text: "প্রতিটি result হলো সেই মুহূর্তে mail server আমাদের যা বলেছে, তার ভিত্তিতে আমাদের সেরা বিচার। Mail server পরে উত্তর বদলাতে পারে। Valid result মানেই ইমেইল inbox-এ পৌঁছাবে, এমন নিশ্চয়তা নয়।" },
+            { type: "p", text: "প্রতিটি result হলো সেই মুহূর্তে mail server আমাদের যা বলেছে, তার ভিত্তিতে আমাদের সেরা বিচার। Mail server পরে উত্তর বদলাতে পারে, আর কিছু server কখনো পরিষ্কার উত্তর দেয় না। Valid result মানেই ইমেইল inbox-এ পৌঁছাবে, এমন নিশ্চয়তা নয়।" },
+          ],
+        },
+        {
+          heading: "সেবা যেমন আছে",
+          blocks: [
+            { type: "p", text: "InboxKnock ফ্রি, আর এটা যেমন আছে এবং যখন চালু থাকে, সেভাবেই দেওয়া হয়। আমরা এটা চালু ও নির্ভুল রাখার যথাসাধ্য চেষ্টা করি, তবে এটা সবসময় চালু থাকবে, ভুলহীন হবে বা আপনার কাজের জন্য উপযুক্ত হবে, এমন নিশ্চয়তা দিই না।" },
+          ],
+        },
+        {
+          heading: "আমাদের দায়ের সীমা",
+          blocks: [
+            { type: "p", text: "আইন যতটা অনুমতি দেয়, InboxKnock বা এর result ব্যবহারের ফলে হওয়া পরোক্ষ ক্ষতির দায় আমাদের নয়, যেমন লাভের ক্ষতি, data হারানো, অথবা আপনার domain বা sending reputation-এর ক্ষতি।" },
+            { type: "p", text: "আইন যতটা অনুমতি দেয়, কোনো দাবিতে আমাদের মোট দায় সেই দাবির আগের ১২ মাসে InboxKnock-এর জন্য আপনি আমাদের যত টাকা দিয়েছেন, তার মধ্যে সীমিত। আইনে যে দায় সীমিত করা যায় না, এই শর্ত তা সীমিত করে না।" },
           ],
         },
         {
           heading: "ব্যবহার বন্ধ করা",
           blocks: [
-            { type: "p", text: "যেকোনো সময় InboxKnock ব্যবহার বন্ধ করতে পারেন। এই শর্ত ভাঙলে আমরা account স্থগিত বা বন্ধ করতে পারি।" },
+            { type: "p", text: "যেকোনো সময় InboxKnock ব্যবহার বন্ধ করতে পারেন। এই শর্ত কেউ ভাঙলে আমরা তার access বন্ধ করতে পারি।" },
           ],
         },
         {
-          heading: "আইনি বিষয়",
+          heading: "শর্তে পরিবর্তন",
           blocks: [
-            { type: "todo", text: "প্রযোজ্য আইন, বিরোধ নিষ্পত্তির আদালত বা স্থান, দায়ের সীমা ও warranty-র ভাষা যোগ করুন। একজন আইনজীবীকে দিয়ে শর্তগুলো দেখিয়ে নিন।" },
+            { type: "p", text: "আমরা এই শর্ত update করতে পারি। করলে এই page-এর উপরের তারিখ বদলে দেব। সেই তারিখের পরেও InboxKnock ব্যবহার করলে নতুন শর্ত প্রযোজ্য হবে।" },
+          ],
+        },
+        {
+          heading: "প্রযোজ্য আইন",
+          blocks: [
+            { type: "p", text: "এই শর্তাবলি বাংলাদেশের আইন অনুযায়ী চলবে। এ নিয়ে কোনো বিরোধ হলে তা ঢাকা, বাংলাদেশের আদালতে মীমাংসা হবে।" },
           ],
         },
         {
@@ -736,48 +801,66 @@ export const LEGAL: Record<Lang, { terms: LegalPage; privacy: LegalPage }> = {
     },
     privacy: {
       title: "গোপনীয়তা",
-      intro: "InboxKnock ব্যবহার করলে আমরা কী তথ্য নিই এবং কেন, এই page তা বলে।",
-      updated: "TODO: এই নীতি কোন তারিখ থেকে কার্যকর, তা যোগ করুন।",
+      intro: "InboxKnock ব্যবহার করলে আমরা কী তথ্য নিই, কেন নিই, আর কতদিন রাখি, এই page তা জানায়।",
+      updated: LEGAL_EFFECTIVE.bn,
       sections: [
+        {
+          heading: "দায়িত্বে কে",
+          blocks: [
+            { type: "p", text: `InboxKnock ${PLACE.bn} থেকে চালানো হয়। এই page-এ বলা তথ্যের দায়িত্ব আমাদের। যোগাযোগ: ${CONTACT_EMAIL}` },
+            { type: "todo", text: "নিবন্ধন শেষ হলে data controller হিসেবে company-র নিবন্ধিত নাম যোগ করুন।" },
+          ],
+        },
         {
           heading: "আমরা কী তথ্য নিই",
           blocks: [
             { type: "list", items: [
-              "যে ইমেইল ঠিকানাগুলো চেক করেন, যাতে সেগুলো চেক করা যায়।",
-              "CSV চেকের জন্য upload করা file। File-টা আপনার browser-এই পড়া হয়। শুধু ইমেইল ঠিকানাগুলো চেকের জন্য আমাদের কাছে আসে।",
-              "আপনার নিজের ইমেইল ঠিকানা, যদি account খোলেন বা early access list-এ যোগ দেন।",
-              "IP address-এর মতো সাধারণ technical তথ্য, অপব্যবহার ঠেকাতে আর ফ্রি limit মানাতে।",
+              "আপনি যে ইমেইল ঠিকানাগুলো চেক করেন, যাতে সেগুলো চেক করতে পারি।",
+              "CSV চেকের জন্য upload করা file আপনার browser-এই থাকে। শুধু ইমেইল ঠিকানাগুলো একটা একটা করে চেকের জন্য আমাদের কাছে আসে।",
+              "আপনার IP address, ফ্রি limit গোনা আর অপব্যবহার ঠেকানোর জন্য।",
+              "আপনার নিজের ইমেইল ঠিকানা, যদি early access list-এ যোগ দেন বা আমাদের লেখেন।",
             ] },
-            { type: "p", text: "আপনার ভাষার পছন্দ আমরা ik_lang নামের ছোট একটি cookie-তে মনে রাখি। এতে শুধু \"en\" বা \"bn\" থাকে।" },
+            { type: "p", text: "Cookie: ik_lang আপনার ভাষা মনে রাখে, এতে শুধু \"en\" বা \"bn\" থাকে। Bot check চালু থাকলে ik_pass দুই ঘণ্টা মনে রাখে যে আপনি সেটা পার হয়েছেন।" },
           ],
         },
         {
-          heading: "আমরা যা করি না",
+          heading: "একটি চেক কীভাবে হয়",
+          blocks: [
+            { type: "p", text: "কোনো ঠিকানা চেক করতে আমাদের server domain-টা খুঁজে দেখে, আর তার mail server-কে জিজ্ঞেস করে mailbox আছে কি না। Mail server আমাদের server-এর IP address আর যে ঠিকানা জিজ্ঞেস করা হলো, তা দেখতে পায়। ঠিকানাটায় কোনো ইমেইল পাঠানো হয় না।" },
+          ],
+        },
+        {
+          heading: "কতদিন তথ্য রাখি",
           blocks: [
             { type: "list", items: [
-              "যে ঠিকানাগুলো চেক করেন, সেখানে আমরা কোনো ইমেইল পাঠাই না।",
-              "যে ঠিকানাগুলো চেক করেন, সেগুলো আমরা বিক্রি করি না।",
+              "চেক করা ঠিকানা আর তার result কোনো database-এ রাখা হয় না। একই ঠিকানা যেন পরপর দুবার চেক না হয়, সেজন্য আমাদের server একটা উত্তর সর্বোচ্চ এক ঘণ্টা memory-তে রাখে।",
+              "প্রতিটি IP address থেকে কতগুলো চেক হলো, সেই হিসাব মাস শেষ (UTC) পর্যন্ত থাকে, তারপর মুছে যায়।",
+              "Server log-এ domain, result আর সময় থাকে, পুরো ঠিকানা থাকে না। Log সর্বোচ্চ ৩০ দিনের মধ্যে মুছে ফেলা হয়।",
+              "Early access-এর ইমেইল launch-এর খবর জানানো পর্যন্ত থাকে, তারপর মুছে ফেলা হয়। চাইলে আগেই মুছে দিতে বলতে পারেন।",
             ] },
           ],
         },
         {
-          heading: "তথ্য কতদিন রাখি",
+          heading: "কারা আমাদের হয়ে তথ্য নিয়ে কাজ করে",
           blocks: [
-            { type: "todo", text: "চেক করা ঠিকানা, result, upload করা তথ্য ও log কতদিন রাখা হয় এবং কখন মুছে ফেলা হয়, তা লিখুন। এটা পূরণ না করে এই page প্রকাশ করবেন না।" },
-          ],
-        },
-        {
-          heading: "কাদের সাথে তথ্য শেয়ার করি",
-          blocks: [
-            { type: "todo", text: "যে service provider-রা তথ্য process করে (যেমন hosting ও verification backend) এবং তারা কোথায় অবস্থিত, তা লিখুন।" },
+            { type: "list", items: [
+              "Vercel Inc. (যুক্তরাষ্ট্র) এই website আর checker চালায়।",
+              "Cloudflare, Inc. (যুক্তরাষ্ট্র) bot check (Turnstile) চালায়, যখন সেটা দেখানো হয়।",
+            ] },
+            { type: "todo", text: "Mailbox চেক যে server provider (VPS) চালায়, সেটা বাছাই হলে তার নাম আর দেশ যোগ করুন।" },
+            { type: "p", text: "আপনার চেক করা ঠিকানা বা অন্য কোনো তথ্য আমরা বিক্রি করি না।" },
           ],
         },
         {
           heading: "আপনার অধিকার",
           blocks: [
-            { type: "p", text: `আপনার সম্পর্কে আমরা কী তথ্য রাখি তা জানতে, সংশোধন করতে বা মুছে ফেলতে বলতে পারেন। ${CONTACT_EMAIL}-এ লিখুন।` },
-            { type: "todo", text: "যে দেশগুলোতে সেবা দেন, সেখানে প্রযোজ্য অধিকার ও আইনি ভিত্তি এবং data controller-এর নাম যোগ করুন।" },
+            { type: "p", text: `আপনার কোন তথ্য আমাদের কাছে আছে, তা জানতে চাইতে পারেন, আর সেটা ঠিক করতে, মুছে দিতে বা ব্যবহার বন্ধ করতে বলতে পারেন। ${CONTACT_EMAIL}-এ লিখুন। আমরা ৩০ দিনের মধ্যে উত্তর দিই।` },
+            { type: "p", text: "আপনি যে চেক চান তা দিতে আর সেবাটা অপব্যবহার থেকে নিরাপদ রাখতে এই তথ্য আমাদের দরকার, তাই আমরা এটা ব্যবহার করি।" },
           ],
+        },
+        {
+          heading: "এই page-এ পরিবর্তন",
+          blocks: [{ type: "p", text: "তথ্য ব্যবহারের ধরন বদলালে আমরা এই page আর উপরের তারিখ update করব।" }],
         },
         {
           heading: "যোগাযোগ",

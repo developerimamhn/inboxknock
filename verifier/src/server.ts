@@ -2,7 +2,7 @@ import http from "node:http";
 import crypto from "node:crypto";
 import { config } from "./config.ts";
 import { createDnsLookup } from "./dns.ts";
-import { createSmtpProbe } from "./smtp.ts";
+import { createRemoteProbe, createSmtpProbe, redact, type SmtpProbe } from "./smtp.ts";
 import { listSizes, loadExtraLists } from "./lists.ts";
 import { isValidSyntax } from "./syntax.ts";
 import { Usage } from "./usage.ts";
@@ -16,10 +16,13 @@ import { verify, type Deps } from "./verify.ts";
 
 loadExtraLists(config.dataDir);
 
+// The local probe also serves POST /smtp when this server runs as the SMTP worker on a VPS.
+const localProbe: SmtpProbe | null = config.smtp.enabled && !config.worker.url ? createSmtpProbe({ ...config.smtp }) : null;
 const deps: Deps = {
   dns: createDnsLookup(config.dnsTimeoutMs),
-  smtp: config.smtp.enabled ? createSmtpProbe({ ...config.smtp }) : null,
+  smtp: config.worker.url ? createRemoteProbe(config.worker.url, config.worker.key, config.worker.timeoutMs) : localProbe,
 };
+const HOST_RE = /^[a-z0-9.-]{1,253}$/i;
 const usage = new Usage(config.dataDir, config.monthlyLimit, config.ratePerMinute);
 
 function send(res: http.ServerResponse, status: number, body: unknown) {
@@ -66,7 +69,33 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || "/", "http://x");
 
   if (req.method === "GET" && url.pathname === "/health") {
-    return send(res, 200, { ok: true, smtp: config.smtp.enabled, port25Blocked: deps.smtp?.blocked?.() ?? false, lists: listSizes() });
+    return send(res, 200, {
+      ok: true,
+      smtp: config.worker.url ? "worker" : config.smtp.enabled ? "local" : "off",
+      port25Blocked: localProbe?.blocked?.() ?? false,
+      lists: listSizes(),
+    });
+  }
+
+  // SMTP worker: mailbox and catch-all only. Needs API_KEY, never open to the public.
+  if (req.method === "POST" && url.pathname === "/smtp") {
+    if (!config.apiKey) return send(res, 503, { error: "worker needs API_KEY" });
+    if (!authorized(req)) return send(res, 401, { error: "unauthorized" });
+    if (!localProbe) return send(res, 503, { error: "smtp off" });
+    let body: { email?: unknown; domain?: unknown; hosts?: unknown };
+    try {
+      body = JSON.parse(await readBody(req));
+    } catch {
+      return send(res, 400, { error: "format" });
+    }
+    const email = typeof body.email === "string" ? body.email.trim() : "";
+    const domain = typeof body.domain === "string" ? body.domain.trim().toLowerCase() : "";
+    const hosts = Array.isArray(body.hosts) ? body.hosts.filter((h): h is string => typeof h === "string" && HOST_RE.test(h)).slice(0, 5) : [];
+    if (!isValidSyntax(email) || !email.toLowerCase().endsWith(`@${domain}`) || !hosts.length) return send(res, 400, { error: "format" });
+    const started = Date.now();
+    const result = await localProbe(email, domain, hosts);
+    console.log(JSON.stringify({ at: new Date().toISOString(), worker: true, ms: Date.now() - started, domain, mailbox: result.mailbox, catchAll: result.catchAll, host: result.host, code: result.code, detail: redact(result.detail) }));
+    return send(res, 200, { ...result, detail: redact(result.detail) });
   }
   if (req.method !== "POST" || (url.pathname !== "/" && url.pathname !== "/verify")) {
     return send(res, 404, { error: "not_found" });
@@ -93,6 +122,7 @@ const server = http.createServer(async (req, res) => {
     const report = await verify(email, deps);
     const remaining = usage.spend(key);
     const { debug, ...publicReport } = report;
+    if (debug?.smtp) debug.smtp.detail = redact(debug.smtp.detail);
     console.log(
       JSON.stringify({ at: new Date().toISOString(), ms: Date.now() - started, status: report.status, reason: report.reason, domain: email.split("@")[1], debug }),
     );

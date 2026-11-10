@@ -17,7 +17,7 @@ export function LegalPage({ lang, page }: { lang: Lang; page: "terms" | "privacy
           <h1 className="display-3 mt-8">{doc.title}</h1>
           <p className="lead mt-6">{doc.intro}</p>
           <p className="mt-6 text-[0.9375rem] text-muted">
-            {t.legal.updated}: <span className="todo mt-2 inline-block">{doc.updated}</span>
+            {t.legal.updated}: <time className="text-paper">{doc.updated}</time>
           </p>
           <div className="mt-12 space-y-12">
             {doc.sections.map((s) => (

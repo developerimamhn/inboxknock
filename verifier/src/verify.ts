@@ -79,9 +79,11 @@ export async function verify(input: string, deps: Deps): Promise<Report> {
 
   // List checks cost nothing, so they always run.
   const free = isFree(domain);
-  const disposable = isDisposable(domain);
-  const role = isRole(local);
   const typo = typoOf(domain);
+  // A misspelled big provider (gmial.com) is a typo or a trap, not a throwaway inbox service,
+  // even when a community list happens to include it.
+  const disposable = !typo && isDisposable(domain);
+  const role = isRole(local);
   const trapLocal = isTrapLocal(local);
   checks.free = free ? "info" : "pass";
   checks.disposable = disposable ? "warn" : "pass";

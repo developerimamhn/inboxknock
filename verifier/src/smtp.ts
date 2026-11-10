@@ -249,8 +249,50 @@ function createLimiter(perHost: number) {
   };
 }
 
-export function createSmtpProbe(opt: ProbeOptions & { perHost: number }): SmtpProbe {
+export type ProbeLimits = {
+  /** Most probes this server starts per minute, all mail hosts together. Protects the IP. */
+  maxPerMinute: number;
+  /** Most probes per minute to one mail host (gmail-smtp-in, outlook protection, ...). */
+  hostPerMinute: number;
+};
+
+/** Sliding one-minute counter. */
+function createMinuteCounter() {
+  const hits = new Map<string, number[]>();
+  return function take(key: string, max: number) {
+    const now = Date.now();
+    const list = (hits.get(key) || []).filter((t) => now - t < 60_000);
+    if (list.length >= max) {
+      hits.set(key, list);
+      return false;
+    }
+    list.push(now);
+    hits.set(key, list);
+    if (hits.size > 20_000) hits.clear();
+    return true;
+  };
+}
+
+/** Mail server replies sometimes repeat the address. Keep it out of logs. */
+export function redact(text: string | undefined) {
+  return text?.replace(/[^\s<>"'@]+@[^\s<>"']+/g, "<address>").slice(0, 300);
+}
+
+type Cached<T> = { value: T; until: number };
+
+export function createSmtpProbe(opt: ProbeOptions & { perHost: number } & Partial<ProbeLimits>): SmtpProbe {
   const limit = createLimiter(opt.perHost);
+  const take = createMinuteCounter();
+  const maxPerMinute = opt.maxPerMinute ?? 60;
+  const hostPerMinute = opt.hostPerMinute ?? 20;
+
+  // Clear answers are kept for a while, so the same address or a known catch-all domain
+  // does not cost another connection to the mail server.
+  const answers = new Map<string, Cached<ProbeResult>>();
+  const catchAllDomains = new Map<string, number>();
+  const ANSWER_TTL = 60 * 60 * 1000;
+  const CATCH_ALL_TTL = 6 * 60 * 60 * 1000;
+
   // Many hosts (Vercel and most clouds) block outbound port 25. After a few hosts in a row cannot
   // be reached, stop trying for a while so every check answers Unknown fast instead of timing out.
   let failsInARow = 0;
@@ -259,14 +301,34 @@ export function createSmtpProbe(opt: ProbeOptions & { perHost: number }): SmtpPr
   const BLOCK_FOR = 10 * 60 * 1000;
 
   const probe: SmtpProbe = async function probe(email, domain, hosts) {
+    const key = email.toLowerCase();
+    const hit = answers.get(key);
+    if (hit && hit.until > Date.now()) return hit.value;
+    if ((catchAllDomains.get(domain) || 0) > Date.now()) return { mailbox: "accepted", catchAll: true, detail: "known catch-all domain" };
+
     if (Date.now() < blockedUntil) return { mailbox: "unknown", catchAll: null, detail: "port 25 unreachable from this server" };
+    if (!take("*", maxPerMinute)) return { mailbox: "unknown", catchAll: null, detail: "busy: probe limit per minute reached" };
+
+    const started = Date.now();
     let last: ProbeResult = { mailbox: "unknown", catchAll: null, detail: "no host answered" };
-    // Try up to two hosts. Move on only when a host cannot be reached or gives no clear answer.
+    // Try up to two hosts. Move on only when a host cannot be reached or gives no clear answer,
+    // and only while there is time left for a second try.
     for (const host of hosts.slice(0, 2)) {
+      if (Date.now() - started > opt.timeoutMs) break;
+      if (!take(host.toLowerCase(), hostPerMinute)) {
+        last = { mailbox: "unknown", catchAll: null, host, detail: "busy: limit per mail server reached" };
+        continue;
+      }
       try {
         const r = await limit(host, () => probeHost(host, email, domain, opt));
         failsInARow = 0;
-        if (r.mailbox !== "unknown") return r;
+        r.detail = redact(r.detail);
+        if (r.mailbox !== "unknown") {
+          answers.set(key, { value: r, until: Date.now() + ANSWER_TTL });
+          if (r.catchAll === true) catchAllDomains.set(domain, Date.now() + CATCH_ALL_TTL);
+          if (answers.size > 50_000) answers.delete(answers.keys().next().value!);
+          return r;
+        }
         last = r;
       } catch (err) {
         const message = (err as Error & { code?: string }).code || (err as Error).message;
@@ -282,6 +344,30 @@ export function createSmtpProbe(opt: ProbeOptions & { perHost: number }): SmtpPr
   };
   probe.blocked = () => Date.now() < blockedUntil;
   return probe;
+}
+
+/**
+ * Sends the mailbox check to an SMTP worker on another server (a VPS with port 25 open).
+ * Everything else still runs here. Any failure is an honest Unknown, never a guess.
+ */
+export function createRemoteProbe(url: string, key: string, timeoutMs: number): SmtpProbe {
+  return async function remote(email, domain, hosts) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+        body: JSON.stringify({ email, domain, hosts: hosts.slice(0, 5) }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (!res.ok) return { mailbox: "unknown", catchAll: null, detail: `worker replied ${res.status}` };
+      const data = (await res.json()) as Partial<ProbeResult>;
+      const mailbox = data.mailbox === "accepted" || data.mailbox === "rejected" ? data.mailbox : "unknown";
+      const catchAll = typeof data.catchAll === "boolean" ? data.catchAll : null;
+      return { mailbox, catchAll, host: data.host, code: data.code, detail: data.detail };
+    } catch (err) {
+      return { mailbox: "unknown", catchAll: null, detail: `worker unreachable: ${(err as Error).name}` };
+    }
+  };
 }
 
 export const __test = { classify };

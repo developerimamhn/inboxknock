@@ -24,6 +24,7 @@ const ERROR_COPY: Record<ErrorKey, keyof ReturnType<typeof getCopy>["checker"]["
   timeout: "timeout",
   server: "server",
   offline: "offline",
+  human: "human",
 };
 
 export function HeroChecker({ lang, mode }: { lang: Lang; mode: CheckerMode }) {

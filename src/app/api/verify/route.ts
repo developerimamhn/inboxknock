@@ -1,5 +1,6 @@
 import { STATUSES, VERIFY_TIMEOUT_MS, verifyEndpoint, type Status } from "@/config/site";
 import { clientIp, json, readEmail, sameOrigin } from "@/lib/api";
+import { humanCheckOn, validPass } from "@/lib/human";
 import { isValidFormat, normalizeEmail } from "@/lib/email";
 import { cleanChecks, demoResult, type VerifyResult } from "@/lib/verify";
 
@@ -36,6 +37,9 @@ export async function POST(req: Request) {
   const raw = await readEmail(req);
   if (raw === null || !isValidFormat(raw)) return json({ error: "format" }, 400);
   const email = normalizeEmail(raw);
+
+  // Bot check (Turnstile), when switched on. Scripts without a pass cookie stop here.
+  if (humanCheckOn() && !validPass(req.headers.get("cookie"), clientIp(req))) return json({ error: "human" }, 403);
 
   const endpoint = verifyEndpoint();
   if (!endpoint) {

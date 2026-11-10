@@ -160,6 +160,51 @@ Two limits of running the verifier on Vercel:
 - **Usage counts.** `usage.json` lives inside the container, so counts reset when an instance restarts, and two instances keep separate counts.
   Move them to a shared store (for example Upstash Redis) before you rely on the monthly limit.
 
+### SMTP worker on a VPS (needed for mailbox checks)
+
+Vercel blocks port 25, so the mailbox and catch-all checks run on a small VPS. The same code does it:
+the VPS runs this Docker image and answers `POST /smtp`. The verifier on Vercel keeps doing every other check
+and sends only the SMTP part to the VPS.
+
+1. Rent a VPS where outbound port 25 is open. Ask the provider before you buy; many close it by default.
+2. Point `verify.inboxknock.com` (A record) at the VPS, and set the VPS IP's reverse DNS (PTR) to the same name.
+   Add the VPS IP to the SPF record of `inboxknock.com`.
+3. On the VPS (Docker installed):
+
+   ```bash
+   git clone https://github.com/developerimamhn/inboxknock.git && cd inboxknock/verifier
+   docker build -t inboxknock-verifier .
+   docker run -d --name ik-worker --restart unless-stopped -p 127.0.0.1:8787:8787      --log-opt max-size=20m --log-opt max-file=5      -e API_KEY=<worker secret> -e SMTP_HELO=verify.inboxknock.com -e SMTP_FROM=verify@inboxknock.com      inboxknock-verifier
+   ```
+
+4. Put HTTPS in front with Caddy (`/etc/caddy/Caddyfile`):
+
+   ```
+   verify.inboxknock.com {
+     reverse_proxy 127.0.0.1:8787
+   }
+   ```
+
+5. In Vercel, add `SMTP_WORKER_URL=https://verify.inboxknock.com/smtp` and `SMTP_WORKER_KEY=<worker secret>`, then redeploy.
+6. Test from the site: a real address you own should be Valid, a made-up address on a real domain (for example
+   `ik-nobody-12345@gmail.com`) Invalid, and an address on a catch-all domain (for example `anything@google.com`) Risky.
+
+Limits that keep the VPS IP clean: at most `SMTP_MAX_PER_MINUTE` probes a minute (default 60), `SMTP_HOST_PER_MINUTE`
+per mail server (default 20), `SMTP_PER_HOST` open connections per mail server (default 3), a 5 second connect timeout
+and a 10 second reply timeout. Clear answers are cached for an hour and catch-all domains for six hours.
+Log lines never contain the full address. The `--log-opt` flags keep logs small, and they rotate well inside 30 days.
+
+Gmail, Yahoo and Outlook sometimes give no clear answer to a new IP. Some Unknown results are normal; Unknown on
+every address means the worker is not reachable or port 25 is closed (check `/health` on the VPS).
+
+### Abuse protection
+
+- Per visitor IP: 60 checks a minute (`RATE_PER_MINUTE`) and the monthly free limit, in the verifier.
+- Total probes per minute on the VPS, so even many IPs together cannot burn it.
+- Optional Cloudflare Turnstile: set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` in Vercel.
+  A visitor passes once and gets a signed cookie for two hours, tied to their IP. Calls without it get `403 human`.
+  Most visitors never see the widget.
+
 ### What no verifier can promise
 
 - Yahoo, AOL and many company servers accept every address. Those come back Risky catch-all.

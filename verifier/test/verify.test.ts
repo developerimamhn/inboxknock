@@ -191,12 +191,84 @@ test("typo trap stays risky when its DNS is broken", async () => {
 test("smtp: blocked port 25 switches to fast Unknown", async () => {
   // 10.255.255.1 is not routable, so connects time out like a firewall drop.
   const probe = createSmtpProbe({ helo: "t", from: "t@t", timeoutMs: 300, startTls: false, perHost: 4, port: 25 });
+  // Each call stops after one slow host (deadline), so three calls make three failures in a row.
   await probe("a@x.io", "x.io", ["10.255.255.1", "10.255.255.2"]);
-  const second = await probe("a@x.io", "x.io", ["10.255.255.3", "10.255.255.4"]);
-  assert.equal(second.detail, "port 25 unreachable from this server");
+  await probe("b@x.io", "x.io", ["10.255.255.3"]);
+  const third0 = await probe("c@x.io", "x.io", ["10.255.255.4"]);
+  assert.equal(third0.detail, "port 25 unreachable from this server");
   assert.equal(probe.blocked?.(), true);
   const t = Date.now();
   const third = await probe("a@x.io", "x.io", ["10.255.255.5"]);
   assert.equal(third.mailbox, "unknown");
   assert.ok(Date.now() - t < 50, "answers at once while blocked");
+});
+
+test("typo domain on the disposable list is shown as spam trap, not disposable", async () => {
+  // gmial.com is on the community disposable list; make sure the typo wins.
+  const { loadExtraLists } = await import("../src/lists.ts");
+  const fs = await import("node:fs");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ik-"));
+  fs.writeFileSync(path.join(dir, "disposable.txt"), "gmial.com\n");
+  loadExtraLists(dir);
+  const r = await verify("sam@gmial.com", accept);
+  assert.equal(r.checks.disposable, "pass");
+  assert.deepEqual([r.status, r.reason, r.checks.spam_trap], ["risky", "spam_trap", "warn"]);
+});
+
+test("smtp: answers are cached, catch-all domains skip new probes", async () => {
+  let rcpts = 0;
+  const srv = await fakeSmtp(() => (rcpts++, "250 OK"));
+  const probe = createSmtpProbe({ helo: "t", from: "t@t", timeoutMs: 3000, startTls: false, perHost: 2, port: srv.port });
+  try {
+    const a = await probe("sam@acme.io", "acme.io", ["127.0.0.1"]);
+    assert.equal(a.catchAll, true);
+    const before = rcpts;
+    const b = await probe("other@acme.io", "acme.io", ["127.0.0.1"]);
+    assert.deepEqual([b.mailbox, b.catchAll, rcpts], ["accepted", true, before]);
+  } finally {
+    srv.close();
+  }
+});
+
+test("smtp: per mail server limit answers Unknown instead of hammering", async () => {
+  const srv = await fakeSmtp((to) => (to.startsWith("ik-") ? "550 5.1.1 no" : "250 OK"));
+  const probe = createSmtpProbe({ helo: "t", from: "t@t", timeoutMs: 3000, startTls: false, perHost: 2, port: srv.port, hostPerMinute: 2 });
+  try {
+    await probe("a@acme.io", "acme.io", ["127.0.0.1"]);
+    await probe("b@acme.io", "acme.io", ["127.0.0.1"]);
+    const c = await probe("c@acme.io", "acme.io", ["127.0.0.1"]);
+    assert.equal(c.mailbox, "unknown");
+    assert.match(c.detail || "", /limit per mail server/);
+  } finally {
+    srv.close();
+  }
+});
+
+test("smtp: replies that repeat the address are redacted", async () => {
+  const r = await probeWith(() => "550 5.1.1 <sam@acme.io>: Recipient address rejected");
+  assert.equal(r.mailbox, "rejected");
+  assert.ok(!(r.detail || "").includes("sam@acme.io"));
+});
+
+test("remote worker: passes answers through, failures are Unknown", async () => {
+  const http = await import("node:http");
+  const { createRemoteProbe } = await import("../src/smtp.ts");
+  let auth = "";
+  const srv = http.createServer((req, res) => {
+    auth = String(req.headers.authorization);
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ mailbox: "rejected", catchAll: null, code: 550 }));
+  });
+  await new Promise<void>((r) => srv.listen(0, "127.0.0.1", () => r()));
+  const port = (srv.address() as net.AddressInfo).port;
+  try {
+    const ok = await createRemoteProbe(`http://127.0.0.1:${port}/smtp`, "k1", 2000)("a@acme.io", "acme.io", ["mx.acme.io"]);
+    assert.deepEqual([ok.mailbox, auth], ["rejected", "Bearer k1"]);
+  } finally {
+    srv.close();
+  }
+  const down = await createRemoteProbe("http://127.0.0.1:1/smtp", "k1", 1000)("a@acme.io", "acme.io", ["mx.acme.io"]);
+  assert.equal(down.mailbox, "unknown");
 });

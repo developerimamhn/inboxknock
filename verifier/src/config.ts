@@ -25,10 +25,18 @@ export const config = {
     timeoutMs: num("SMTP_TIMEOUT_MS", 10000),
     startTls: on("SMTP_STARTTLS", true),
     perHost: num("SMTP_PER_HOST", 3),
+    maxPerMinute: num("SMTP_MAX_PER_MINUTE", 60),
+    hostPerMinute: num("SMTP_HOST_PER_MINUTE", 20),
+  },
+  /** When set, mailbox and catch-all checks go to this SMTP worker (a VPS with port 25 open). */
+  worker: {
+    url: env.SMTP_WORKER_URL || "",
+    key: env.SMTP_WORKER_KEY || "",
+    timeoutMs: num("SMTP_WORKER_TIMEOUT_MS", 15000),
   },
   dnsTimeoutMs: num("DNS_TIMEOUT_MS", 5000),
   monthlyLimit: num("FREE_MONTHLY_CHECKS", 10000),
-  ratePerMinute: num("RATE_PER_MINUTE", 300),
+  ratePerMinute: num("RATE_PER_MINUTE", 60),
   dataDir: path.resolve(env.DATA_DIR || "./data"),
 };
 

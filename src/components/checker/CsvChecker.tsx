@@ -114,14 +114,15 @@ export function CsvChecker({ lang, onDoor }: { lang: Lang; onDoor: (d: { state: 
     onDoor({ state: "knocking", label: t.hero.door.knocking });
 
     const checkOne = async (email: string): Promise<Outcome | "limit"> => {
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < 5; attempt++) {
         const res = await verifyEmail(email, ctrl.signal);
         if (res.ok) return { status: res.result.status, reason: res.result.reason, free: res.result.free, demo: res.result.demo };
         if (res.code === "limit") return "limit";
         if (res.code === "format") return { status: "invalid", reason: "format" };
         if (res.code === "offline") return { status: "error", reason: "offline" };
-        // rate, timeout, server: wait a moment and try again
-        await new Promise((r) => setTimeout(r, res.code === "rate" ? 3000 : 1200));
+        if (res.code === "human") return { status: "error", reason: "bot check failed" };
+        // rate, timeout, server: wait and try again, longer each time when the limit is reached
+        await new Promise((r) => setTimeout(r, res.code === "rate" ? 5000 * (attempt + 1) : 1500));
       }
       return { status: "error", reason: "not checked" };
     };
